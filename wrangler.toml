@@ -12,6 +12,12 @@ run_worker_first = ["/api/*"]
 binding = "DATA"
 id = "7e31536a31dc4388a2215f579a0a7e7d"
 
+# 로그인 사용자·즐겨찾기 (KV는 하루 쓰기 1,000회 제한이라 사용자 데이터는 D1에 저장)
+[[d1_databases]]
+binding = "DB"
+database_name = "goldic"
+database_id = "1d53eff5-7878-4bab-90e5-efcc3d221cbb"
+
 # 10분마다 시세 수집
 [triggers]
 crons = ["*/10 * * * *"]
@@ -20,3 +26,6 @@ crons = ["*/10 * * * *"]
 # 수집할 리그 (쉼표 구분, 첫 번째가 기본 리그). 리그 1개당 poe.ninja 요청 13회 —
 # 무료 플랜은 실행 1회당 외부 요청 50회 제한이라 3개까지 가능
 LEAGUES = "Forbidden Rites,HC Forbidden Rites"
+# Google Cloud Console에서 만든 OAuth 클라이언트 ID (공개값). 비어 있으면 로그인 버튼이 안 보임
+GOOGLE_CLIENT_ID = "949111050517-97g7aojoo09vf214fqaitdfq9vq7b1pl.apps.googleusercontent.com"
+# 세션 서명 키 SESSION_SECRET 은 비밀값이라 여기 말고 `npx wrangler secret put SESSION_SECRET` 로 설정

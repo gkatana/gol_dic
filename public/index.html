@@ -24,6 +24,13 @@
   select:focus, input:focus { border-color: var(--accent); }
   .rates { color: var(--muted); font-size: 13px; }
   .rates b { color: var(--text); font-weight: 600; }
+  #auth { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+  #auth img { width: 26px; height: 26px; border-radius: 50%; }
+  #auth .who { font-size: 13px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #auth button.out { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px; color: var(--muted); }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 14px; font-size: 13px; z-index: 20; display: none; max-width: calc(100% - 32px); }
+  .toast.on { display: block; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
   .toolbar input[type=search] { flex: 1; min-width: 200px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -95,6 +102,7 @@
     <select id="league" aria-label="리그"></select>
     <span class="sp"></span>
     <span class="rates" id="rates"></span>
+    <div id="auth"></div>
   </header>
 
   <div class="toolbar">
@@ -112,10 +120,12 @@
   <footer>
     비공식 팬 사이트입니다. Grinding Gear Games 및 카카오게임즈와 관련이 없습니다.<br>
     시세 출처: <a href="https://poe.ninja/poe2/economy" target="_blank" rel="noopener">poe.ninja</a> ·
-    한글 이름: 카카오게임즈 POE2 공식 거래소 데이터 · <span id="updated"></span>
+    한글 이름: 카카오게임즈 POE2 공식 거래소 데이터 · <span id="updated"></span><br>
+    Google 로그인은 즐겨찾기 동기화에만 쓰며, Google 계정 고유 ID·이름·프로필 사진만 저장합니다 (이메일 저장 안 함). · <a href="/privacy.html">개인정보처리방침</a>
   </footer>
 </div>
 
+<div class="toast" id="toast"></div>
 <div class="modal" id="modal">
   <div class="sheet" id="sheet"></div>
 </div>
@@ -134,21 +144,90 @@ const CUR = {
 };
 const THIN_VOL = 5;   // 하루 거래량(디바인 환산)이 이보다 적으면 "거래 적음"으로 보고 추천에서 제외
 
-const S = { league: null, data: null, cat: 'all', q: '', sort: 'price', item: null, detail: null, qty: 1, fav: new Set() };
+const S = { league: null, data: null, cat: 'all', q: '', sort: 'price', item: null, detail: null, qty: 1, fav: new Set(), user: null, clientId: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 
-// 즐겨찾기 — 이 브라우저에만 저장 (아이템 id 기준이라 리그를 바꿔도 유지)
-try { S.fav = new Set(JSON.parse(load('fav') || '[]')); } catch (e) {}
+// 즐겨찾기 — 로그인하면 계정(서버)에, 아니면 이 브라우저에 저장 (아이템 id 기준이라 리그를 바꿔도 유지)
+function localFavs() { try { return JSON.parse(load('fav') || '[]'); } catch (e) { return []; } }
+S.fav = new Set(localFavs());
 if (load('cat') === 'fav') S.cat = 'fav';
-function toggleFav(id) {
-  S.fav.has(id) ? S.fav.delete(id) : S.fav.add(id);
-  store('fav', JSON.stringify([...S.fav]));
+function refreshFavViews() {
+  if (!S.data) return;
   renderChips(); renderList();
-  if (S.item && S.item.id === id) renderDetail();
+  if (S.item) renderDetail();
+}
+async function toggleFav(id) {
+  const on = !S.fav.has(id);
+  on ? S.fav.add(id) : S.fav.delete(id);
+  refreshFavViews();
+  if (!S.user) { store('fav', JSON.stringify([...S.fav])); return; }
+  try {
+    await apiPost('/api/favs', { id, on });
+  } catch (e) {
+    on ? S.fav.delete(id) : S.fav.add(id);   // 저장 실패 → 되돌림
+    refreshFavViews();
+    toast('즐겨찾기 저장 실패: ' + e.message);
+  }
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 3000);
+}
+
+// ── Google 로그인 ───────────────────────────────────────────────────────
+async function apiPost(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+function renderAuth() {
+  const el = $('auth');
+  if (S.user) {
+    el.innerHTML = (S.user.picture ? `<img src="${esc(S.user.picture)}" alt="" referrerpolicy="no-referrer">` : '') +
+      `<span class="who">${esc(S.user.name || '로그인됨')}</span><button class="out" id="logout">로그아웃</button>`;
+    return;
+  }
+  el.innerHTML = '';
+  if (!S.clientId) return;
+  const draw = () => {
+    google.accounts.id.initialize({ client_id: S.clientId, callback: onGoogleCredential, ux_mode: 'popup' });
+    google.accounts.id.renderButton(el, { theme: 'filled_black', size: 'medium', shape: 'pill', text: 'signin', locale: 'ko' });
+  };
+  if (window.google && google.accounts) return draw();
+  const sc = document.createElement('script');
+  sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = draw;
+  document.head.appendChild(sc);
+}
+async function onGoogleCredential(resp) {
+  try {
+    const j = await apiPost('/api/auth/google', { credential: resp.credential, favs: localFavs() });
+    S.user = j.user; S.fav = new Set(j.favs);
+    store('fav', '[]');   // 이 브라우저 즐겨찾기는 계정으로 옮겼으므로 비움
+    renderAuth(); refreshFavViews();
+    toast('로그인했습니다. 즐겨찾기가 계정에 저장됩니다.');
+  } catch (e) { toast('로그인 실패: ' + e.message); }
+}
+async function logout() {
+  try { await apiPost('/api/auth/logout'); } catch (e) {}
+  if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+  S.user = null; S.fav = new Set(localFavs());
+  renderAuth(); refreshFavViews();
+}
+async function loadMe() {
+  try {
+    const r = await fetch('/api/me');
+    const j = await r.json();
+    S.clientId = j.clientId;
+    if (j.user) { S.user = j.user; S.fav = new Set(j.favs || []); refreshFavViews(); }
+  } catch (e) {}
+  renderAuth();
 }
 function starBtn(id) {
   const on = S.fav.has(id);
@@ -368,9 +447,11 @@ $('modal').addEventListener('change', e => {
   S.qty = Math.min(9999, Math.max(1, Math.floor(Number(e.target.value) || 1)));
   renderDetail();
 });
+$('auth').addEventListener('click', e => { if (e.target.id === 'logout') logout(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.item) closeItem(); });
 
 loadLeague(load('league'));
+loadMe();
 </script>
 </body>
 </html>

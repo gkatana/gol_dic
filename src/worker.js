@@ -3,7 +3,10 @@
 //   (카테고리별로 따로 쓰면 무료 KV 쓰기 한도 하루 1,000회를 넘김 → 반드시 한 번에 저장)
 // - /api/snapshot : 리그별 아이템 목록 (KV에서 읽음)
 // - /api/item     : 아이템 하나의 화폐별 직거래 시세 (poe.ninja details를 엣지 캐시로 10분 보관)
+// - /api/me, /api/auth/*, /api/favs : Google 로그인 + 즐겨찾기 동기화 (src/auth.js, D1)
 // - 그 외 경로는 public/ 정적 파일
+
+import { handleAuth, ITEM_ID_RE } from './auth.js';
 
 const NINJA = 'https://poe.ninja/poe2/api';
 const KAKAO_STATIC = 'https://poe.game.daum.net/api/trade2/data/static';
@@ -31,6 +34,9 @@ export default {
     try {
       if (url.pathname === '/api/snapshot') return await handleSnapshot(url, env);
       if (url.pathname === '/api/item') return await handleItem(req, url, env, ctx);
+      if (url.pathname === '/api/me' || url.pathname === '/api/favs' || url.pathname.startsWith('/api/auth/')) {
+        return await handleAuth(req, url, env);
+      }
       return json({ error: 'not found' }, 404);
     } catch (e) {
       return json({ error: String((e && e.message) || e) }, 502);
@@ -137,17 +143,17 @@ async function handleItem(req, url, env, ctx) {
   const league = url.searchParams.get('league');
   const type = url.searchParams.get('type');
   const id = url.searchParams.get('id');
-  if (!leaguesOf(env).includes(league) || !TYPES.includes(type) || !/^[a-z0-9-]{1,100}$/.test(id || '')) {
+  if (!leaguesOf(env).includes(league) || !TYPES.includes(type) || !ITEM_ID_RE.test(id || '')) {
     return json({ error: 'bad params' }, 400);
   }
 
-  const cacheKey = new Request(`https://cache.local/item?league=${encodeURIComponent(league)}&type=${type}&id=${id}`);
+  const cacheKey = new Request(`https://cache.local/item?league=${encodeURIComponent(league)}&type=${type}&id=${encodeURIComponent(id)}`);
   const cache = caches.default;
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
   const j = await getJson(
-    `${NINJA}/economy/exchange/current/details?league=${encodeURIComponent(league)}&type=${type}&id=${id}`
+    `${NINJA}/economy/exchange/current/details?league=${encodeURIComponent(league)}&type=${type}&id=${encodeURIComponent(id)}`
   );
   const body = {
     id,
