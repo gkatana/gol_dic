@@ -30,7 +30,7 @@
   .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
   .chip.on { background: var(--accent); border-color: var(--accent); color: #1a1406; font-weight: 600; }
   .list { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .row { display: grid; grid-template-columns: 40px 1fr 120px 90px 90px; gap: 10px; align-items: center;
+  .row { display: grid; grid-template-columns: 40px 1fr 120px 90px 90px 30px; gap: 10px; align-items: center;
     padding: 8px 12px; border-top: 1px solid var(--line); cursor: pointer; }
   .row:first-child { border-top: 0; }
   .row:hover { background: var(--panel2); }
@@ -54,6 +54,10 @@
   .sheet-h { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
   .sheet-h img { width: 52px; height: 52px; object-fit: contain; }
   .sheet-h .ko { font-size: 18px; font-weight: 700; }
+  .star { background: none; border: 0; padding: 2px; font-size: 20px; line-height: 1; color: #4a505c; cursor: pointer; }
+  .star:hover { color: var(--muted); }
+  .star.on { color: var(--accent); }
+  .sheet-h .star { font-size: 24px; }
   .sheet-h .x { margin-left: auto; background: none; border: 0; font-size: 22px; color: var(--muted); cursor: pointer; }
   .qty { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .qty input { width: 100px; }
@@ -76,7 +80,7 @@
   .note { color: var(--muted); font-size: 12px; margin-top: 12px; line-height: 1.6; }
 
   @media (max-width: 640px) {
-    .row { grid-template-columns: 34px 1fr 96px; }
+    .row { grid-template-columns: 34px 1fr 96px 30px; }
     .row .c-vol, .row .c-ch { display: none; }
     .row img { width: 30px; height: 30px; }
     .modal { padding: 0; }
@@ -130,12 +134,26 @@ const CUR = {
 };
 const THIN_VOL = 5;   // 하루 거래량(디바인 환산)이 이보다 적으면 "거래 적음"으로 보고 추천에서 제외
 
-const S = { league: null, data: null, cat: 'all', q: '', sort: 'price', item: null, detail: null, qty: 1 };
+const S = { league: null, data: null, cat: 'all', q: '', sort: 'price', item: null, detail: null, qty: 1, fav: new Set() };
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+// 즐겨찾기 — 이 브라우저에만 저장 (아이템 id 기준이라 리그를 바꿔도 유지)
+try { S.fav = new Set(JSON.parse(load('fav') || '[]')); } catch (e) {}
+if (load('cat') === 'fav') S.cat = 'fav';
+function toggleFav(id) {
+  S.fav.has(id) ? S.fav.delete(id) : S.fav.add(id);
+  store('fav', JSON.stringify([...S.fav]));
+  renderChips(); renderList();
+  if (S.item && S.item.id === id) renderDetail();
+}
+function starBtn(id) {
+  const on = S.fav.has(id);
+  return `<button class="star${on ? ' on' : ''}" data-fav="${esc(id)}" aria-label="${on ? '즐겨찾기 해제' : '즐겨찾기'}" title="${on ? '즐겨찾기 해제' : '즐겨찾기'}">${on ? '★' : '☆'}</button>`;
+}
 
 function fmt(n) {
   if (n == null || !isFinite(n)) return '-';
@@ -181,8 +199,8 @@ async function loadLeague(league) {
 
 function renderChips() {
   const types = [...new Set(S.data.items.map(i => i.type))];
-  if (S.cat !== 'all' && !types.includes(S.cat)) S.cat = 'all';
-  const chips = [['all', '전체']].concat(types.map(t => [t, S.data.typeKo[t] || t]));
+  if (S.cat !== 'all' && S.cat !== 'fav' && !types.includes(S.cat)) S.cat = 'all';
+  const chips = [['all', '전체'], ['fav', `★ 즐겨찾기 ${S.fav.size}`]].concat(types.map(t => [t, S.data.typeKo[t] || t]));
   $('chips').innerHTML = chips.map(([k, l]) =>
     `<button class="chip${S.cat === k ? ' on' : ''}" data-cat="${esc(k)}">${esc(l)}</button>`).join('');
 }
@@ -190,7 +208,7 @@ function renderChips() {
 function filtered() {
   const q = S.q.trim().toLowerCase();
   let a = S.data.items.filter(i =>
-    (S.cat === 'all' || i.type === S.cat) &&
+    (S.cat === 'all' || (S.cat === 'fav' ? S.fav.has(i.id) : i.type === S.cat)) &&
     (!q || (i.ko || '').toLowerCase().includes(q) || i.en.toLowerCase().includes(q)));
   const by = {
     price: (x, y) => y.div - x.div,
@@ -203,9 +221,14 @@ function filtered() {
 
 function renderList() {
   const a = filtered();
-  if (!a.length) { $('list').innerHTML = '<div class="empty">검색 결과가 없습니다.</div>'; return; }
+  if (!a.length) {
+    $('list').innerHTML = S.cat === 'fav' && !S.q.trim()
+      ? '<div class="empty">즐겨찾기한 아이템이 없습니다.<br>목록이나 상세 화면의 ☆를 누르면 여기에 모아 볼 수 있습니다.</div>'
+      : '<div class="empty">검색 결과가 없습니다.</div>';
+    return;
+  }
   const head = `<div class="row head"><span></span><span>아이템</span><span class="num">1개 시세</span>
-    <span class="num c-ch">7일</span><span class="num c-vol">거래량/일</span></div>`;
+    <span class="num c-ch">7일</span><span class="num c-vol">거래량/일</span><span></span></div>`;
   $('list').innerHTML = head + a.map(i => {
     const p = priceLabel(i.div);
     const ch = i.ch7 == null ? '-' : (i.ch7 > 0 ? '+' : '') + fmt(i.ch7) + '%';
@@ -216,6 +239,7 @@ function renderList() {
       <div class="num">${esc(p.main)}<small>${esc(p.sub)}</small></div>
       <div class="num c-ch ${cls}">${ch}</div>
       <div class="num c-vol">${fmt(i.vol)}<small>디바인</small></div>
+      ${starBtn(i.id)}
     </div>`;
   }).join('');
 }
@@ -252,7 +276,8 @@ function renderDetail() {
   const head = `<div class="sheet-h">
       ${i.img ? `<img src="${IMG + esc(i.img)}" alt="">` : ''}
       <div><div class="ko">${esc(i.ko || i.en)}</div><div class="en" style="color:var(--muted);font-size:12px">${esc(i.en)} · ${esc(S.data.typeKo[i.type] || i.type)}</div></div>
-      <button class="x" data-close aria-label="닫기">×</button>
+      <span style="margin-left:auto"></span>${starBtn(i.id)}
+      <button class="x" data-close aria-label="닫기" style="margin-left:4px">×</button>
     </div>`;
   if (!d) { $('sheet').innerHTML = head + '<div class="empty">화폐별 시세 불러오는 중…</div>'; return; }
   if (d.error) { $('sheet').innerHTML = head + `<div class="empty">불러오지 못했습니다. (${esc(d.error)})</div>`; return; }
@@ -327,11 +352,14 @@ $('q').addEventListener('input', e => { S.q = e.target.value; renderList(); });
 $('sort').addEventListener('change', e => { S.sort = e.target.value; renderList(); });
 $('chips').addEventListener('click', e => {
   const b = e.target.closest('[data-cat]'); if (!b) return;
-  S.cat = b.dataset.cat; renderChips(); renderList();
+  S.cat = b.dataset.cat; store('cat', S.cat); renderChips(); renderList();
 });
-$('list').addEventListener('click', e => { const r = e.target.closest('.row[data-id]'); if (r) openItem(r.dataset.id); });
+$('list').addEventListener('click', e => {
+  const f = e.target.closest('[data-fav]'); if (f) return toggleFav(f.dataset.fav);
+  const r = e.target.closest('.row[data-id]'); if (r) openItem(r.dataset.id); });
 $('modal').addEventListener('click', e => {
   if (e.target === $('modal') || e.target.closest('[data-close]')) return closeItem();
+  const f = e.target.closest('[data-fav]'); if (f) return toggleFav(f.dataset.fav);
   const q = e.target.closest('[data-q]');
   if (q) { S.qty = Math.min(9999, Math.max(1, S.qty + Number(q.dataset.q))); renderDetail(); }
 });
