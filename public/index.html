@@ -130,6 +130,13 @@
   .card .stat .v { font-size: 12px; font-weight: 600; color: var(--muted); }
   .hero .xchg { font-size: 19px; gap: 8px; }
   .hero .xchg .ci { width: 26px; height: 26px; }
+  .qty { flex-wrap: wrap; }
+  .qty .rec { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; background: rgba(217,164,65,.10);
+    border: 1px solid rgba(217,164,65,.45); border-radius: 10px; padding: 4px 12px; }
+  .qty .rec .rl { font-size: 12px; color: var(--muted); }
+  .qty .rec .amt.big { font-size: 22px; color: var(--accent); gap: 5px; }
+  .qty .rec .amt.big .ci { width: 26px; height: 26px; }
+  .qty .rec .hu { font-size: 13px; color: var(--muted); }
   .tag.neg { color: var(--bad); border-color: rgba(229,103,90,.5); }
   .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
   .card.best { border-color: var(--accent); }
@@ -154,6 +161,10 @@
     .modal { padding: 0; }
     .sheet { border-radius: 0; min-height: 100%; }
     .stats { grid-template-columns: repeat(4, 1fr); }
+    .qty { gap: 6px; }
+    .qty input { width: 56px; }
+    .qty .rec { padding: 3px 10px; gap: 6px; }
+    .qty .rec .lg, .qty .rec .hu { display: none; }
   }
 </style>
 </head>
@@ -456,18 +467,12 @@ function renderDetail() {
     </div>`;
   if (!rows.length) { $('sheet').innerHTML = head + qty + '<div class="empty">카오스·디바인·엑잘 직거래 시세가 없습니다.</div>'; return; }
 
-  // 맨 위: 추천 화폐와 받는 양을 크게
+  // 판매 개수 줄 오른쪽에 추천을 한 줄로 (받는 양이 0이면 묶음 비율 안내)
   const pick = best && best.got === 0 ? bundlePick(rows, per) : null;
-  const hero = pick ? `<div class="hero">
-      <div class="hl">${fmt(n)}개로는 어느 화폐도 1개가 안 됩니다 · 묶어서 팔기 추천</div>
-      <div class="hv"><span class="amt big">${fmt(pick.x.bundle.k)}개 :</span>${amt(pick.x.id, pick.x.bundle.m, 'big')}<span class="hu">${CUR[pick.x.id].ko}</span></div>
-      <div class="hs">시세의 ${Math.round(pick.x.bundle.eff * 100)}% · 판매 개수를 ${fmt(pick.x.bundle.k)}개 이상으로 올려 보세요</div>
-    </div>` : best ? `<div class="hero">
-      <div class="hl">${fmt(n)}개 팔 때 추천</div>
-      <div class="hv">${amt(best.id, best.got, 'big')}<span class="hu">${CUR[best.id].ko}</span></div>
-      <div class="hs">≈ ${fmt(best.valueDiv)} 디바인 가치</div>
-      ${best.got ? exchangeRow(best.id, best.got, per) : ''}
-    </div>` : '';
+  const rec = pick
+    ? `<span class="rec"><span class="rl"><span class="lg">묶어서 팔기 </span>추천</span>${fmt(pick.x.bundle.k)}개 : ${amt(pick.x.id, pick.x.bundle.m, 'big')}<span class="hu">${CUR[pick.x.id].ko}</span></span>`
+    : best ? `<span class="rec"><span class="rl"><span class="lg">${fmt(n)}개 팔 때 </span>추천</span>${amt(best.id, best.got, 'big')}<span class="hu">${CUR[best.id].ko}</span></span>` : '';
+  const qtyRow = qty.replace(/<\/div>\s*$/, rec + '</div>');
 
   const sorted = rows.slice().sort((a, b) => b.valueDiv - a.valueDiv);
   const cards = sorted.map(x => {
@@ -494,7 +499,7 @@ function renderDetail() {
   }).join('');
 
   const dv = d.pairs.find(p => p.id === 'divine') || d.pairs[0];
-  $('sheet').innerHTML = head + qty + hero + `<div class="cards">${cards}</div>` +
+  $('sheet').innerHTML = head + qtyRow + `<div class="cards">${cards}</div>` +
     (dv && dv.history.length > 1 ? `<div class="hist"><div class="lbl">최근 ${dv.history.length}일 ${CUR[dv.id] ? CUR[dv.id].short : dv.id} 시세</div>${spark(dv.history)}</div>` : '') +
     `<div class="note">• 받는 양은 거래소가 정수 단위라 버림으로 계산했습니다. 1개씩 팔면 손해가 크면 "추천 묶음"(아이템 : 화폐) 비율로 올려 보세요.<br>
       • 💱 은 받은 화폐를 교환소 평균 시세로 다른 화폐 하나로 바꿨을 때 받는 개수입니다 (정수 단위라 버림).<br>
