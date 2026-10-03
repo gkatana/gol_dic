@@ -27,7 +27,7 @@ npx wrangler login
 npx wrangler kv namespace create DATA   # 나온 id를 wrangler.toml의 REPLACE_WITH_KV_ID 자리에
 npm run deploy
 ```
-주소: `https://gol-dic.<계정 서브도메인>.workers.dev` (Cloudflare 대시보드에서 도메인 연결 가능)
+주소: `https://goldic.sickal.workers.dev` (Cloudflare 대시보드에서 도메인 연결 가능)
 
 ## 리그 변경
 `wrangler.toml`의 `LEAGUES` 수정 후 재배포. 리그 1개당 poe.ninja 요청 13회,
