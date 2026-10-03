@@ -101,11 +101,33 @@
   .verdict { background: rgba(217,164,65,.12); border: 1px solid rgba(217,164,65,.4); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
   .verdict b { color: var(--accent); }
   .cards { display: grid; gap: 8px; }
+  .amt { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ci { width: 20px; height: 20px; object-fit: contain; }
+  .hero { background: rgba(217,164,65,.10); border: 1px solid rgba(217,164,65,.45); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .hero .hl { font-size: 12px; color: var(--muted); }
+  .hero .hv { display: flex; align-items: center; gap: 10px; margin: 2px 0; }
+  .hero .amt.big { font-size: 32px; color: var(--accent); gap: 6px; }
+  .hero .amt.big .ci { width: 36px; height: 36px; }
+  .hero .hu { color: var(--muted); font-size: 14px; }
+  .hero .hs { color: var(--muted); font-size: 13px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .stat { background: var(--panel); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+  .stat .k { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat .v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .xchg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 15px; }
+  .xchg .xl { font-size: 14px; }
+  .xchg .arr { color: var(--muted); }
+  .xchg .box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 6px; }
+  .hero .xchg .box { background: var(--panel2); }
+  .xchg .plus { color: var(--muted); font-weight: 400; }
+  .xchg .or { color: var(--muted); font-size: 12px; }
+  .tag.neg { color: var(--bad); border-color: rgba(229,103,90,.5); }
   .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
   .card.best { border-color: var(--accent); }
   .card .top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .card .cur { font-weight: 700; }
-  .card .got { font-size: 18px; font-weight: 700; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .card .got { font-size: 20px; margin-left: auto; }
+  .card .got .ci { width: 24px; height: 24px; }
   .card .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
   .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
   .tag.best { color: #1a1406; background: var(--accent); border-color: var(--accent); font-weight: 600; }
@@ -122,6 +144,7 @@
     .row img { width: 30px; height: 30px; }
     .modal { padding: 0; }
     .sheet { border-radius: 0; min-height: 100%; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -372,25 +395,33 @@ function bestBundle(rate) {
   return best;
 }
 
+// 화폐 아이콘 + 숫자 (아이콘은 목록의 카오스/디바인/엑잘 아이템 이미지, 없으면 글자)
+function curImg(c) { const it = S.data && S.data.items.find(x => x.id === c); return it && it.img ? IMG + it.img : null; }
+function amt(c, n, cls = '') {
+  const src = curImg(c);
+  return `<span class="amt ${cls}" title="${fmt(n)} ${CUR[c].ko}">${src ? `<img class="ci" src="${esc(src)}" alt="">` : ''}${fmt(n)}${src ? '' : ' ' + CUR[c].short}</span>`;
+}
+
 // 판매로 받은 화폐 g개(c)를 교환소에서 다시 바꾸면 얼마인지 — 정수 단위라 받는 쪽은 버림, 내는 쪽은 올림
-//  · 카오스/엑잘: 디바인을 최대한 사고(필요 개수 올림) 남는 건 엑잘로 · 또는 전부 다른 화폐로
-//  · 디바인: 카오스로 / 엑잘로 바꾸면
-function exchangeText(c, g, per) {
-  if (!g || !per.chaos || !per.exalted) return '';
-  const f = n => fmt(n) + ' ' + CUR[c].short;
-  const obj = f(g) + (c === 'chaos' ? '를' : '을');   // 카오스를 / 디바인을 / 엑잘을
-  const to = (t, amt = g) => Math.floor(amt * per[t] / per[c] + 1e-9);   // c → t (버림)
-  if (c === 'divine') {
-    return `받은 ${obj} 바꾸면 <b>${fmt(to('chaos'))} 카오스</b> 또는 <b>${fmt(to('exalted'))} 엑잘</b>`;
-  }
+//  · 카오스/엑잘: 디바인을 최대한 사고(필요 개수 올림) 남는 건 엑잘로 / 또는 전부 다른 화폐로
+//  · 디바인: 카오스로 / 엑잘로
+// 반환: 선택지 배열, 선택지 = [[화폐, 개수], ...]
+function exchangePlan(c, g, per) {
+  if (!g || !per.chaos || !per.exalted) return [];
+  const to = (t, amt = g) => Math.floor(amt * per[t] / per[c] + 1e-9);
+  if (c === 'divine') return [[['chaos', to('chaos')]], [['exalted', to('exalted')]]];
+  const all = c === 'chaos' ? [['exalted', to('exalted')]] : [['chaos', to('chaos')]];
   let d = Math.floor(g / per[c] + 1e-9);
   while (d > 0 && Math.ceil(d * per[c] - 1e-9) > g) d--;
-  const left = g - Math.ceil(d * per[c] - 1e-9);                         // 디바인 사고 남는 c
-  const ex = c === 'exalted' ? left : to('exalted', left);
-  const other = c === 'chaos' ? `전부 엑잘이면 <b>${fmt(to('exalted'))} 엑잘</b>` : `전부 카오스면 <b>${fmt(to('chaos'))} 카오스</b>`;
-  if (d === 0) return `받은 ${obj} 바꾸면 디바인 1개는 안 되고, ${other}`;
-  return `받은 ${obj} 바꾸면 <b>${fmt(d)} 디바인 + ${fmt(ex)} 엑잘</b>` +
-    ` <span style="color:var(--muted)">(디바인 ${fmt(d)}개에 ${f(Math.ceil(d * per[c] - 1e-9))} 사용)</span> · ${other}`;
+  if (d === 0) return [all];
+  const left = g - Math.ceil(d * per[c] - 1e-9);
+  return [[['divine', d], ['exalted', c === 'exalted' ? left : to('exalted', left)]], all];
+}
+function exchangeRow(c, g, per) {
+  const plan = exchangePlan(c, g, per);
+  if (!plan.length) return '';
+  const opt = o => `<span class="box">${o.map(([k, n]) => amt(k, n)).join('<span class="plus">+</span>')}</span>`;
+  return `<div class="xchg"><span class="xl">💱</span>${amt(c, g)}<span class="arr">→</span>${plan.map(opt).join('<span class="or">또는</span>')}</div>`;
 }
 
 function calc(d = S.detail, n = S.qty) {
@@ -423,39 +454,43 @@ function renderDetail() {
     </div>`;
   if (!rows.length) { $('sheet').innerHTML = head + qty + '<div class="empty">카오스·디바인·엑잘 직거래 시세가 없습니다.</div>'; return; }
 
-  const verdict = best
-    ? `<div class="verdict">${n}개를 팔 때는 <b>${CUR[best.id].ko}</b>로 파는 게 가장 많이 받습니다.
-        <span style="color:var(--muted)">(${fmt(best.got)} ${CUR[best.id].short} ≈ ${fmt(best.valueDiv)} 디바인 가치)</span>
-        ${best.got ? `<div style="margin-top:4px">💱 ${exchangeText(best.id, best.got, per)}</div>` : ''}</div>`
-    : '';
+  // 맨 위: 추천 화폐와 받는 양을 크게
+  const hero = best ? `<div class="hero">
+      <div class="hl">${fmt(n)}개 팔 때 추천</div>
+      <div class="hv">${amt(best.id, best.got, 'big')}<span class="hu">${CUR[best.id].ko}</span></div>
+      <div class="hs">≈ ${fmt(best.valueDiv)} 디바인 가치</div>
+      ${best.got ? exchangeRow(best.id, best.got, per) : ''}
+    </div>` : '';
+
   const sorted = rows.slice().sort((a, b) => b.valueDiv - a.valueDiv);
   const cards = sorted.map(x => {
     const isBest = best && x.id === best.id;
     const diff = best && !isBest && best.valueDiv > 0 ? Math.round((x.valueDiv / best.valueDiv - 1) * 100) : null;
     const b = x.bundle;
-    const bundleTxt = b ? (b.k === 1 ? `1개씩 팔아도 손해 거의 없음` :
-      `추천 묶음 <b>${b.k}개 : ${b.m} ${CUR[x.id].short}</b> (시세의 ${Math.round(b.eff * 100)}%)`) : '';
-    const others = Object.keys(CUR).filter(c => c !== x.id && per[c])
-      .map(c => `${fmt(x.valueDiv * per[c])} ${CUR[c].short}`).join(' · ');
+    const stat = (k, v, sub = '') => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div>${sub ? `<div class="k">${sub}</div>` : ''}</div>`;
     return `<div class="card${isBest ? ' best' : ''}">
         <div class="top">
           <span class="cur">${CUR[x.id].ko}</span>
           ${isBest ? '<span class="tag best">추천</span>' : ''}
           ${x.thin ? '<span class="tag warn">거래 적음</span>' : ''}
-          ${diff != null ? `<span class="tag">${diff > 0 ? '+' : ''}${diff}%</span>` : ''}
-          <span class="got">${fmt(x.got)} ${CUR[x.id].short}</span>
+          ${diff != null ? `<span class="tag ${diff < 0 ? 'neg' : ''}">${diff > 0 ? '+' : ''}${diff}%</span>` : ''}
+          <span class="got">${amt(x.id, x.got)}</span>
         </div>
-        <div class="sub">시장가 1개당 ${fmt(x.rate)} ${CUR[x.id].short} · ${n}개 = ${fmt(n * x.rate)} → 버림 ${fmt(x.got)} · 환산 ${others}</div>
-        <div class="sub">${bundleTxt} · 거래량 하루 ${fmt(x.vol)} 디바인어치</div>
-        ${x.got ? `<div class="sub">💱 ${exchangeText(x.id, x.got, per)}</div>` : ''}
+        <div class="stats">
+          ${stat('1개 시세', fmt(x.rate), n > 1 ? `${fmt(n)}개 = ${fmt(n * x.rate)}` : '')}
+          ${stat('디바인 가치', fmt(x.valueDiv))}
+          ${stat('추천 묶음', b ? (b.k === 1 ? '1개씩' : `${b.k} : ${b.m}`) : '-', b ? `시세의 ${Math.round(b.eff * 100)}%` : '')}
+          ${stat('거래량/일', fmt(x.vol), '디바인어치')}
+        </div>
+        ${x.got ? exchangeRow(x.id, x.got, per) : ''}
       </div>`;
   }).join('');
 
   const dv = d.pairs.find(p => p.id === 'divine') || d.pairs[0];
-  $('sheet').innerHTML = head + qty + verdict + `<div class="cards">${cards}</div>` +
+  $('sheet').innerHTML = head + qty + hero + `<div class="cards">${cards}</div>` +
     (dv && dv.history.length > 1 ? `<div class="hist"><div class="lbl">최근 ${dv.history.length}일 ${CUR[dv.id] ? CUR[dv.id].short : dv.id} 시세</div>${spark(dv.history)}</div>` : '') +
-    `<div class="note">• 거래소는 개수를 정수로만 걸 수 있어 받는 화폐는 버림으로 계산했습니다. 1개씩 팔면 손해가 크면 "추천 묶음" 비율로 올려 보세요.<br>
-      • 💱 교환 금액은 현재 교환소 평균 시세 기준입니다. 정수 단위라 받는 화폐는 버림, 내는 화폐는 올림으로 계산했습니다.<br>
+    `<div class="note">• 받는 양은 거래소가 정수 단위라 버림으로 계산했습니다. 1개씩 팔면 손해가 크면 "추천 묶음"(아이템 : 화폐) 비율로 올려 보세요.<br>
+      • 💱 은 받은 화폐를 교환소 평균 시세로 다시 바꿨을 때입니다 (받는 쪽 버림, 내는 쪽 올림). 왼쪽은 디바인을 최대한 사고 남는 걸 엑잘로 바꾼 경우입니다.<br>
       • 하루 거래량이 ${THIN_VOL} 디바인어치 미만인 화폐는 잘 안 팔릴 수 있어 추천에서 뺐습니다.<br>
       • 시세는 poe.ninja 집계값이라 실제 호가와 다를 수 있습니다. 올리기 전에 거래소 호가를 확인하세요.</div>`;
 }
