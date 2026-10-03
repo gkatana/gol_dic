@@ -14,7 +14,7 @@
   html, body { margin: 0; background: var(--bg); color: var(--text);
     font: 14px/1.5 "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
   button, input, select { font: inherit; color: inherit; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px 16px 90px; }
   header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px; }
   header h1 { font-size: 20px; margin: 0; color: var(--accent); letter-spacing: -0.3px; }
   header .sp { flex: 1; }
@@ -28,7 +28,7 @@
   #auth img { width: 26px; height: 26px; border-radius: 50%; }
   #auth .who { font-size: 13px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #auth button.out { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px; color: var(--muted); }
-  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--line);
+  .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--line);
     border-radius: 10px; padding: 9px 14px; font-size: 13px; z-index: 20; display: none; max-width: calc(100% - 32px); }
   .toast.on { display: block; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
@@ -37,7 +37,7 @@
   .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
   .chip.on { background: var(--accent); border-color: var(--accent); color: #1a1406; font-weight: 600; }
   .list { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .row { display: grid; grid-template-columns: 40px 1fr 120px 90px 90px 30px; gap: 10px; align-items: center;
+  .row { display: grid; grid-template-columns: 40px 1fr 120px 90px 90px 30px 40px; gap: 10px; align-items: center;
     padding: 8px 12px; border-top: 1px solid var(--line); cursor: pointer; }
   .row:first-child { border-top: 0; }
   .row:hover { background: var(--panel2); }
@@ -65,6 +65,33 @@
   .star:hover { color: var(--muted); }
   .star.on { color: var(--accent); }
   .sheet-h .star { font-size: 24px; }
+  .cmp { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 2px 0; width: 38px; font-size: 11px; color: var(--muted); cursor: pointer; }
+  .cmp:hover { border-color: var(--muted); }
+  .cmp.on { background: #5aa9e6; border-color: #5aa9e6; color: #0b1622; font-weight: 700; }
+  .cmpbar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9; display: none; align-items: center; gap: 10px;
+    background: var(--panel2); border: 1px solid #5aa9e6; border-radius: 12px; padding: 8px 10px 8px 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.45); max-width: calc(100% - 32px); }
+  .cmpbar.on { display: flex; }
+  .cmpbar .cnt { font-weight: 700; white-space: nowrap; }
+  .cmpbar .names { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px; }
+  .cmpbar button { border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; border: 1px solid var(--line); background: var(--panel); }
+  .cmpbar button.go { background: #5aa9e6; border-color: #5aa9e6; color: #0b1622; font-weight: 700; }
+  .cmpbar button:disabled { opacity: .5; cursor: default; }
+  .sheet.wide { max-width: 980px; }
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table.cmpt { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+  table.cmpt th, table.cmpt td { padding: 8px 10px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.cmpt th { border-top: 0; background: var(--panel2); color: var(--muted); font-weight: 500; font-size: 12px; }
+  table.cmpt th.it { text-align: left; }
+  table.cmpt td.it { text-align: left; white-space: normal; min-width: 180px; }
+  table.cmpt td.it .itw { display: flex; align-items: center; gap: 8px; }
+  table.cmpt td.it img { width: 30px; height: 30px; object-fit: contain; }
+  table.cmpt .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  table.cmpt small { display: block; color: var(--muted); font-size: 11px; }
+  table.cmpt .rm { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
   .sheet-h .x { margin-left: auto; background: none; border: 0; font-size: 22px; color: var(--muted); cursor: pointer; }
   .qty { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .qty input { width: 100px; }
@@ -87,7 +114,8 @@
   .note { color: var(--muted); font-size: 12px; margin-top: 12px; line-height: 1.6; }
 
   @media (max-width: 640px) {
-    .row { grid-template-columns: 34px 1fr 96px 30px; }
+    .row { grid-template-columns: 34px 1fr 96px 30px 40px; }
+    .cmpbar .names { display: none; }
     .row .c-vol, .row .c-ch { display: none; }
     .row img { width: 30px; height: 30px; }
     .modal { padding: 0; }
@@ -126,6 +154,8 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="cmpbar" id="cmpbar"></div>
+<div class="modal" id="cmpModal"><div class="sheet wide" id="cmpSheet"></div></div>
 <div class="modal" id="modal">
   <div class="sheet" id="sheet"></div>
 </div>
@@ -274,6 +304,7 @@ async function loadLeague(league) {
   $('updated').textContent = '갱신: ' + new Date(S.data.updatedAt).toLocaleString('ko-KR');
   renderChips();
   renderList();
+  renderCmpBar();
 }
 
 function renderChips() {
@@ -307,7 +338,7 @@ function renderList() {
     return;
   }
   const head = `<div class="row head"><span></span><span>아이템</span><span class="num">1개 시세</span>
-    <span class="num c-ch">7일</span><span class="num c-vol">거래량/일</span><span></span></div>`;
+    <span class="num c-ch">7일</span><span class="num c-vol">거래량/일</span><span></span><span></span></div>`;
   $('list').innerHTML = head + a.map(i => {
     const p = priceLabel(i.div);
     const ch = i.ch7 == null ? '-' : (i.ch7 > 0 ? '+' : '') + fmt(i.ch7) + '%';
@@ -318,7 +349,7 @@ function renderList() {
       <div class="num">${esc(p.main)}<small>${esc(p.sub)}</small></div>
       <div class="num c-ch ${cls}">${ch}</div>
       <div class="num c-vol">${fmt(i.vol)}<small>디바인</small></div>
-      ${starBtn(i.id)}
+      ${starBtn(i.id)}${cmpBtn(i.id)}
     </div>`;
   }).join('');
 }
@@ -327,7 +358,8 @@ function renderList() {
 // 거래소는 개수를 정수로만 걸 수 있으므로 받는 화폐는 버림 처리
 function bestBundle(rate) {
   let best = null;
-  for (let k = 1; k <= 40; k++) {
+  const k0 = Math.max(1, Math.ceil(1 / rate - 1e-9));   // 받는 화폐가 최소 1개가 되는 개수부터
+  for (let k = k0; k <= k0 + 40; k++) {
     const m = Math.floor(k * rate + 1e-9);
     if (m < 1) continue;
     const eff = m / (k * rate);
@@ -337,10 +369,9 @@ function bestBundle(rate) {
   return best;
 }
 
-function calc() {
-  const d = S.detail, r = d.rates || S.data.rates || {};
+function calc(d = S.detail, n = S.qty) {
+  const r = d.rates || S.data.rates || {};
   const per = { divine: 1, chaos: r.chaos, exalted: r.exalted };   // 1 디바인당 해당 화폐 개수
-  const n = S.qty;
   const rows = d.pairs.filter(p => CUR[p.id] && per[p.id] && p.rate > 0).map(p => {
     const got = Math.floor(n * p.rate + 1e-9);
     return { ...p, got, valueDiv: got / per[p.id], thin: (p.vol || 0) < THIN_VOL, bundle: bestBundle(p.rate) };
@@ -411,6 +442,158 @@ function spark(h) {
   </svg><div class="lbl" style="display:flex;justify-content:space-between"><span>최저 ${fmt(mn)}</span><span>최고 ${fmt(mx)}</span></div>`;
 }
 
+// 아이템 화폐별 시세 — 같은 리그·아이템은 5분 동안 다시 받지 않음 (상세 화면과 비교 화면이 같이 씀)
+const detailCache = new Map();
+async function fetchDetail(i) {
+  const key = S.league + '|' + i.id, hit = detailCache.get(key);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.d;
+  let d;
+  try {
+    d = await api(`/api/item?league=${encodeURIComponent(S.league)}&type=${encodeURIComponent(i.type)}&id=${encodeURIComponent(i.did || i.id)}`);
+    detailCache.set(key, { at: Date.now(), d });
+  } catch (e) { d = { error: e.message }; }
+  return d;
+}
+
+// ── 시세 비교 ───────────────────────────────────────────────────────────
+// 목록의 "비교" 버튼으로 담은 아이템(최대 6개)만 표와 그래프로 나란히 비교. 담은 목록은 이 브라우저에 저장
+const MAX_CMP = 6;
+const CMP_COLORS = ['#d9a441', '#5aa9e6', '#4cc38a', '#e5675a', '#b38ef3', '#d0d4dc'];
+S.cmp = new Set((() => { try { return JSON.parse(load('cmp') || '[]'); } catch (e) { return []; } })());
+S.cmpDetails = {};
+function cmpBtn(id) {
+  const on = S.cmp.has(id);
+  return `<button class="cmp${on ? ' on' : ''}" data-cmp="${esc(id)}" title="${on ? '비교에서 빼기' : '비교에 담기'}">비교</button>`;
+}
+function cmpItems() { return [...S.cmp].map(id => S.data.items.find(x => x.id === id)).filter(Boolean); }
+function toggleCmp(id) {
+  if (S.cmp.has(id)) S.cmp.delete(id);
+  else if (S.cmp.size >= MAX_CMP) return toast(`비교는 최대 ${MAX_CMP}개까지 담을 수 있습니다`);
+  else S.cmp.add(id);
+  saveCmp();
+}
+function saveCmp() {
+  store('cmp', JSON.stringify([...S.cmp]));
+  renderList(); renderCmpBar();
+  if ($('cmpModal').classList.contains('open')) { if (cmpItems().length) renderCompare(); else closeCompare(); }
+}
+function renderCmpBar() {
+  const items = S.data ? cmpItems() : [];
+  const bar = $('cmpbar');
+  bar.classList.toggle('on', items.length > 0);
+  if (!items.length) return;
+  bar.innerHTML = `<span class="cnt">비교 ${items.length}/${MAX_CMP}</span>
+    <span class="names">${esc(items.map(i => i.ko || i.en).join(', '))}</span>
+    <button data-cmp-clear>비우기</button>
+    <button class="go" data-cmp-open${items.length < 2 ? ' disabled title="2개 이상 담아 주세요"' : ''}>비교하기</button>`;
+}
+async function openCompare() {
+  const items = cmpItems();
+  if (items.length < 2) return toast('비교할 아이템을 2개 이상 담아 주세요');
+  $('cmpModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  S.cmpDetails = {};
+  renderCompare();
+  await Promise.all(items.map(async i => {
+    S.cmpDetails[i.id] = await fetchDetail(i);
+    if ($('cmpModal').classList.contains('open')) renderCompare();
+  }));
+}
+function closeCompare() { $('cmpModal').classList.remove('open'); if (!S.item) document.body.style.overflow = ''; }
+
+// 1개 팔 때 가장 많이 받는 화폐. 1개로는 어느 화폐도 1개가 안 되는 싼 아이템은 묶음 비율로 안내
+function cmpRec(d) {
+  const { rows, best, per } = calc(d, 1);
+  if (best && best.got > 0) return `<b>${CUR[best.id].short}</b><small>${fmt(best.got)}개 받음</small>`;
+  const pool = rows.some(x => !x.thin) ? rows.filter(x => !x.thin) : rows;
+  let pick = null;
+  for (const x of pool) {
+    if (!x.bundle) continue;
+    const v = x.bundle.m / x.bundle.k / per[x.id];   // 1개당 디바인 가치
+    if (!pick || v > pick.v) pick = { x, v };
+  }
+  if (!pick) return '-';
+  return `<b>${CUR[pick.x.id].short}</b><small>묶어서 ${pick.x.bundle.k}개 : ${pick.x.bundle.m}</small>`;
+}
+
+function renderCompare() {
+  const items = cmpItems().sort((a, b) => b.div - a.div);
+  const color = {};
+  [...S.cmp].forEach((id, k) => { color[id] = CMP_COLORS[k % CMP_COLORS.length]; });
+  const top = items.length ? items[0].div : 0;
+  const pairCell = (d, cur) => {
+    if (!d) return '<td>…</td>';
+    const p = !d.error && d.pairs.find(x => x.id === cur);
+    if (!p) return '<td>-</td>';
+    return `<td>${fmt(p.rate)}<small>${(p.vol || 0) < THIN_VOL ? '거래 적음' : '하루 ' + fmt(p.vol) + ' 디바인어치'}</small></td>`;
+  };
+  const rows = items.map(i => {
+    const d = S.cmpDetails[i.id], p = priceLabel(i.div);
+    let rec = '<td>…</td>';
+    if (d && d.error) rec = '<td>-</td>';
+    else if (d) {
+      rec = `<td>${cmpRec(d)}</td>`;
+    }
+    const ch = i.ch7 == null ? '-' : (i.ch7 > 0 ? '+' : '') + fmt(i.ch7) + '%';
+    return `<tr>
+      <td class="it"><div class="itw"><span class="dot" style="background:${color[i.id]}"></span>
+        ${i.img ? `<img src="${IMG + esc(i.img)}" alt="">` : ''}
+        <span>${esc(i.ko || i.en)}${i.ko ? `<small>${esc(i.en)}</small>` : ''}</span></div></td>
+      <td><b>${esc(p.main)}</b><small>${esc(p.sub)}</small></td>
+      <td>${top > 0 ? (i.div / top * 100 < 1 ? '1% 미만' : Math.round(i.div / top * 100) + '%') : '-'}</td>
+      ${pairCell(d, 'divine')}${pairCell(d, 'chaos')}${pairCell(d, 'exalted')}
+      ${rec}
+      <td class="${i.ch7 > 0 ? 'up' : i.ch7 < 0 ? 'down' : ''}">${ch}</td>
+      <td><button class="rm" data-cmp-remove="${esc(i.id)}" title="비교에서 빼기">×</button></td>
+    </tr>`;
+  }).join('');
+  const missing = S.cmp.size - items.length;
+  $('cmpSheet').innerHTML = `<div class="sheet-h"><div><div class="ko">시세 비교</div>
+      <div style="color:var(--muted);font-size:12px">${esc(LEAGUE_KO[S.league] || S.league)} · ${items.length}개 · 비싼 순</div></div>
+      <button class="x" data-close aria-label="닫기">×</button></div>
+    <div class="tbl-wrap"><table class="cmpt">
+      <tr><th class="it">아이템</th><th>1개 시세</th><th>최고가 대비</th><th>디바인 직거래</th><th>카오스 직거래</th><th>엑잘 직거래</th><th>1개 팔 때 추천</th><th>7일</th><th></th></tr>
+      ${rows}
+    </table></div>
+    ${cmpChart(items, color)}
+    <div class="note">• 직거래 칸은 아이템 1개를 그 화폐로 팔 때 받는 시장가입니다 (버림 전).
+      "1개 팔 때 추천"은 버림까지 반영해 가장 많이 받는 화폐입니다.<br>
+      ${missing > 0 ? `• 담아둔 아이템 중 ${missing}개는 이 리그에 시세가 없어 빠졌습니다.<br>` : ''}
+      • 개수를 바꿔 계산하려면 목록에서 아이템을 눌러 상세 화면을 여세요.</div>`;
+}
+
+// 최근 14일 디바인 시세를 첫날 대비 변동률(%)로 겹쳐 그림 — 가격대가 달라도 흐름을 비교할 수 있게
+function cmpChart(items, color) {
+  const series = items.map(i => {
+    const d = S.cmpDetails[i.id];
+    const p = d && !d.error && (d.pairs.find(x => x.id === 'divine') || d.pairs[0]);
+    return p && p.history.length > 1 ? { id: i.id, name: i.ko || i.en, h: p.history } : null;
+  }).filter(Boolean);
+  if (!series.length) return '';
+  const days = [...new Set(series.flatMap(x => x.h.map(y => y.t)))].sort();
+  const lines = series.map(x => {
+    const base = x.h[0].rate;
+    return { ...x, pts: x.h.map(y => ({ x: days.indexOf(y.t), y: (y.rate / base - 1) * 100 })) };
+  });
+  const ys = lines.flatMap(l => l.pts.map(q => q.y)).concat(0);
+  const mn = Math.min(...ys), mx = Math.max(...ys), rg = mx - mn || 1;
+  const w = 900, ht = 180, pad = 8;
+  const X = x => pad + x * (w - 2 * pad) / Math.max(1, days.length - 1);
+  const Y = y => ht - pad - (y - mn) / rg * (ht - 2 * pad);
+  const paths = lines.map(l => `<polyline points="${l.pts.map(q => X(q.x).toFixed(1) + ',' + Y(q.y).toFixed(1)).join(' ')}"
+      fill="none" stroke="${color[l.id]}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join('');
+  const day = t => t.slice(5, 10).replace('-', '/');
+  const pct = v => (v > 0 ? '+' : '') + fmt(v) + '%';
+  return `<div class="hist"><div class="lbl">최근 ${days.length}일 시세 흐름 (첫날 대비 %, 디바인 기준)</div>
+    <svg viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none" style="height:180px">
+      <line x1="${pad}" x2="${w - pad}" y1="${Y(0)}" y2="${Y(0)}" stroke="#3a404c" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>
+      ${paths}
+    </svg>
+    <div class="lbl" style="display:flex;justify-content:space-between"><span>${day(days[0])} · 최저 ${pct(mn)}</span><span>최고 ${pct(mx)} · ${day(days[days.length - 1])}</span></div>
+    <div class="legend">${lines.map(l => `<span><i style="background:${color[l.id]}"></i>${esc(l.name)} ${pct(l.pts[l.pts.length - 1].y)}</span>`).join('')}</div>
+  </div>`;
+}
+
 async function openItem(id) {
   const i = S.data.items.find(x => x.id === id);
   if (!i) return;
@@ -418,9 +601,7 @@ async function openItem(id) {
   $('modal').classList.add('open');
   document.body.style.overflow = 'hidden';
   renderDetail();
-  try {
-    S.detail = await api(`/api/item?league=${encodeURIComponent(S.league)}&type=${encodeURIComponent(i.type)}&id=${encodeURIComponent(i.did || i.id)}`);
-  } catch (e) { S.detail = { error: e.message }; }
+  S.detail = await fetchDetail(i);
   if (S.item === i) renderDetail();
 }
 function closeItem() { $('modal').classList.remove('open'); document.body.style.overflow = ''; S.item = null; }
@@ -435,7 +616,17 @@ $('chips').addEventListener('click', e => {
 });
 $('list').addEventListener('click', e => {
   const f = e.target.closest('[data-fav]'); if (f) return toggleFav(f.dataset.fav);
+  const c = e.target.closest('[data-cmp]'); if (c) return toggleCmp(c.dataset.cmp);
   const r = e.target.closest('.row[data-id]'); if (r) openItem(r.dataset.id); });
+$('cmpbar').addEventListener('click', e => {
+  if (e.target.closest('[data-cmp-open]')) return openCompare();
+  if (e.target.closest('[data-cmp-clear]')) { S.cmp.clear(); saveCmp(); }
+});
+$('cmpModal').addEventListener('click', e => {
+  if (e.target === $('cmpModal') || e.target.closest('[data-close]')) return closeCompare();
+  const rm = e.target.closest('[data-cmp-remove]');
+  if (rm) { S.cmp.delete(rm.dataset.cmpRemove); saveCmp(); }
+});
 $('modal').addEventListener('click', e => {
   if (e.target === $('modal') || e.target.closest('[data-close]')) return closeItem();
   const f = e.target.closest('[data-fav]'); if (f) return toggleFav(f.dataset.fav);
@@ -448,7 +639,10 @@ $('modal').addEventListener('change', e => {
   renderDetail();
 });
 $('auth').addEventListener('click', e => { if (e.target.id === 'logout') logout(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.item) closeItem(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('cmpModal').classList.contains('open')) closeCompare(); else if (S.item) closeItem();
+});
 
 loadLeague(load('league'));
 loadMe();
