@@ -372,6 +372,27 @@ function bestBundle(rate) {
   return best;
 }
 
+// 판매로 받은 화폐 g개(c)를 교환소에서 다시 바꾸면 얼마인지 — 정수 단위라 받는 쪽은 버림, 내는 쪽은 올림
+//  · 카오스/엑잘: 디바인을 최대한 사고(필요 개수 올림) 남는 건 엑잘로 · 또는 전부 다른 화폐로
+//  · 디바인: 카오스로 / 엑잘로 바꾸면
+function exchangeText(c, g, per) {
+  if (!g || !per.chaos || !per.exalted) return '';
+  const f = n => fmt(n) + ' ' + CUR[c].short;
+  const obj = f(g) + (c === 'chaos' ? '를' : '을');   // 카오스를 / 디바인을 / 엑잘을
+  const to = (t, amt = g) => Math.floor(amt * per[t] / per[c] + 1e-9);   // c → t (버림)
+  if (c === 'divine') {
+    return `받은 ${obj} 바꾸면 <b>${fmt(to('chaos'))} 카오스</b> 또는 <b>${fmt(to('exalted'))} 엑잘</b>`;
+  }
+  let d = Math.floor(g / per[c] + 1e-9);
+  while (d > 0 && Math.ceil(d * per[c] - 1e-9) > g) d--;
+  const left = g - Math.ceil(d * per[c] - 1e-9);                         // 디바인 사고 남는 c
+  const ex = c === 'exalted' ? left : to('exalted', left);
+  const other = c === 'chaos' ? `전부 엑잘이면 <b>${fmt(to('exalted'))} 엑잘</b>` : `전부 카오스면 <b>${fmt(to('chaos'))} 카오스</b>`;
+  if (d === 0) return `받은 ${obj} 바꾸면 디바인 1개는 안 되고, ${other}`;
+  return `받은 ${obj} 바꾸면 <b>${fmt(d)} 디바인 + ${fmt(ex)} 엑잘</b>` +
+    ` <span style="color:var(--muted)">(디바인 ${fmt(d)}개에 ${f(Math.ceil(d * per[c] - 1e-9))} 사용)</span> · ${other}`;
+}
+
 function calc(d = S.detail, n = S.qty) {
   const r = d.rates || S.data.rates || {};
   const per = { divine: 1, chaos: r.chaos, exalted: r.exalted };   // 1 디바인당 해당 화폐 개수
@@ -404,7 +425,8 @@ function renderDetail() {
 
   const verdict = best
     ? `<div class="verdict">${n}개를 팔 때는 <b>${CUR[best.id].ko}</b>로 파는 게 가장 많이 받습니다.
-        <span style="color:var(--muted)">(${fmt(best.got)} ${CUR[best.id].short} ≈ ${fmt(best.valueDiv)} 디바인 가치)</span></div>`
+        <span style="color:var(--muted)">(${fmt(best.got)} ${CUR[best.id].short} ≈ ${fmt(best.valueDiv)} 디바인 가치)</span>
+        ${best.got ? `<div style="margin-top:4px">💱 ${exchangeText(best.id, best.got, per)}</div>` : ''}</div>`
     : '';
   const sorted = rows.slice().sort((a, b) => b.valueDiv - a.valueDiv);
   const cards = sorted.map(x => {
@@ -425,6 +447,7 @@ function renderDetail() {
         </div>
         <div class="sub">시장가 1개당 ${fmt(x.rate)} ${CUR[x.id].short} · ${n}개 = ${fmt(n * x.rate)} → 버림 ${fmt(x.got)} · 환산 ${others}</div>
         <div class="sub">${bundleTxt} · 거래량 하루 ${fmt(x.vol)} 디바인어치</div>
+        ${x.got ? `<div class="sub">💱 ${exchangeText(x.id, x.got, per)}</div>` : ''}
       </div>`;
   }).join('');
 
@@ -432,6 +455,7 @@ function renderDetail() {
   $('sheet').innerHTML = head + qty + verdict + `<div class="cards">${cards}</div>` +
     (dv && dv.history.length > 1 ? `<div class="hist"><div class="lbl">최근 ${dv.history.length}일 ${CUR[dv.id] ? CUR[dv.id].short : dv.id} 시세</div>${spark(dv.history)}</div>` : '') +
     `<div class="note">• 거래소는 개수를 정수로만 걸 수 있어 받는 화폐는 버림으로 계산했습니다. 1개씩 팔면 손해가 크면 "추천 묶음" 비율로 올려 보세요.<br>
+      • 💱 교환 금액은 현재 교환소 평균 시세 기준입니다. 정수 단위라 받는 화폐는 버림, 내는 화폐는 올림으로 계산했습니다.<br>
       • 하루 거래량이 ${THIN_VOL} 디바인어치 미만인 화폐는 잘 안 팔릴 수 있어 추천에서 뺐습니다.<br>
       • 시세는 poe.ninja 집계값이라 실제 호가와 다를 수 있습니다. 올리기 전에 거래소 호가를 확인하세요.</div>`;
 }
