@@ -402,20 +402,13 @@ function amt(c, n, cls = '') {
   return `<span class="amt ${cls}" title="${fmt(n)} ${CUR[c].ko}">${src ? `<img class="ci" src="${esc(src)}" alt="">` : ''}${fmt(n)}${src ? '' : ' ' + CUR[c].short}</span>`;
 }
 
-// 판매로 받은 화폐 g개(c)를 교환소에서 다시 바꾸면 얼마인지 — 정수 단위라 받는 쪽은 버림, 내는 쪽은 올림
-//  · 카오스/엑잘: 디바인을 최대한 사고(필요 개수 올림) 남는 건 엑잘로 / 또는 전부 다른 화폐로
-//  · 디바인: 카오스로 / 엑잘로
-// 반환: 선택지 배열, 선택지 = [[화폐, 개수], ...]
+// 판매로 받은 화폐 g개(c)를 교환소에서 다른 화폐 하나로 통째로 바꾸면 몇 개인지 (정수 단위라 버림, 0개는 생략)
+// 반환: 선택지 배열, 선택지 = [[화폐, 개수]]
 function exchangePlan(c, g, per) {
   if (!g || !per.chaos || !per.exalted) return [];
-  const to = (t, amt = g) => Math.floor(amt * per[t] / per[c] + 1e-9);
-  if (c === 'divine') return [[['chaos', to('chaos')]], [['exalted', to('exalted')]]];
-  const all = c === 'chaos' ? [['exalted', to('exalted')]] : [['chaos', to('chaos')]];
-  let d = Math.floor(g / per[c] + 1e-9);
-  while (d > 0 && Math.ceil(d * per[c] - 1e-9) > g) d--;
-  if (d === 0) return [all];
-  const left = g - Math.ceil(d * per[c] - 1e-9);
-  return [[['divine', d], ['exalted', c === 'exalted' ? left : to('exalted', left)]], all];
+  return ['divine', 'chaos', 'exalted'].filter(t => t !== c)
+    .map(t => [[t, Math.floor(g * per[t] / per[c] + 1e-9)]])
+    .filter(o => o[0][1] > 0);
 }
 function exchangeRow(c, g, per) {
   const plan = exchangePlan(c, g, per);
@@ -455,7 +448,12 @@ function renderDetail() {
   if (!rows.length) { $('sheet').innerHTML = head + qty + '<div class="empty">카오스·디바인·엑잘 직거래 시세가 없습니다.</div>'; return; }
 
   // 맨 위: 추천 화폐와 받는 양을 크게
-  const hero = best ? `<div class="hero">
+  const pick = best && best.got === 0 ? bundlePick(rows, per) : null;
+  const hero = pick ? `<div class="hero">
+      <div class="hl">${fmt(n)}개로는 어느 화폐도 1개가 안 됩니다 · 묶어서 팔기 추천</div>
+      <div class="hv"><span class="amt big">${fmt(pick.x.bundle.k)}개 :</span>${amt(pick.x.id, pick.x.bundle.m, 'big')}<span class="hu">${CUR[pick.x.id].ko}</span></div>
+      <div class="hs">시세의 ${Math.round(pick.x.bundle.eff * 100)}% · 판매 개수를 ${fmt(pick.x.bundle.k)}개 이상으로 올려 보세요</div>
+    </div>` : best ? `<div class="hero">
       <div class="hl">${fmt(n)}개 팔 때 추천</div>
       <div class="hv">${amt(best.id, best.got, 'big')}<span class="hu">${CUR[best.id].ko}</span></div>
       <div class="hs">≈ ${fmt(best.valueDiv)} 디바인 가치</div>
@@ -490,7 +488,7 @@ function renderDetail() {
   $('sheet').innerHTML = head + qty + hero + `<div class="cards">${cards}</div>` +
     (dv && dv.history.length > 1 ? `<div class="hist"><div class="lbl">최근 ${dv.history.length}일 ${CUR[dv.id] ? CUR[dv.id].short : dv.id} 시세</div>${spark(dv.history)}</div>` : '') +
     `<div class="note">• 받는 양은 거래소가 정수 단위라 버림으로 계산했습니다. 1개씩 팔면 손해가 크면 "추천 묶음"(아이템 : 화폐) 비율로 올려 보세요.<br>
-      • 💱 은 받은 화폐를 교환소 평균 시세로 다시 바꿨을 때입니다 (받는 쪽 버림, 내는 쪽 올림). 왼쪽은 디바인을 최대한 사고 남는 걸 엑잘로 바꾼 경우입니다.<br>
+      • 💱 은 받은 화폐를 교환소 평균 시세로 다른 화폐 하나로 바꿨을 때 받는 개수입니다 (정수 단위라 버림).<br>
       • 하루 거래량이 ${THIN_VOL} 디바인어치 미만인 화폐는 잘 안 팔릴 수 있어 추천에서 뺐습니다.<br>
       • 시세는 poe.ninja 집계값이라 실제 호가와 다를 수 있습니다. 올리기 전에 거래소 호가를 확인하세요.</div>`;
 }
@@ -563,10 +561,8 @@ async function openCompare() {
 }
 function closeCompare() { $('cmpModal').classList.remove('open'); if (!S.item) document.body.style.overflow = ''; }
 
-// 1개 팔 때 가장 많이 받는 화폐. 1개로는 어느 화폐도 1개가 안 되는 싼 아이템은 묶음 비율로 안내
-function cmpRec(d) {
-  const { rows, best, per } = calc(d, 1);
-  if (best && best.got > 0) return `<b>${CUR[best.id].short}</b><small>${fmt(best.got)}개 받음</small>`;
+// 너무 싸서 팔아도 화폐 1개가 안 될 때: 묶음 비율로 팔았을 때 1개당 가치가 가장 큰 화폐
+function bundlePick(rows, per) {
   const pool = rows.some(x => !x.thin) ? rows.filter(x => !x.thin) : rows;
   let pick = null;
   for (const x of pool) {
@@ -574,6 +570,14 @@ function cmpRec(d) {
     const v = x.bundle.m / x.bundle.k / per[x.id];   // 1개당 디바인 가치
     if (!pick || v > pick.v) pick = { x, v };
   }
+  return pick;
+}
+
+// 1개 팔 때 가장 많이 받는 화폐. 1개로는 어느 화폐도 1개가 안 되는 싼 아이템은 묶음 비율로 안내
+function cmpRec(d) {
+  const { rows, best, per } = calc(d, 1);
+  if (best && best.got > 0) return `<b>${CUR[best.id].short}</b><small>${fmt(best.got)}개 받음</small>`;
+  const pick = bundlePick(rows, per);
   if (!pick) return '-';
   return `<b>${CUR[pick.x.id].short}</b><small>묶어서 ${pick.x.bundle.k}개 : ${pick.x.bundle.m}</small>`;
 }
