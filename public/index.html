@@ -137,6 +137,9 @@
   .qty .rec .amt.big { font-size: 22px; color: var(--accent); gap: 5px; }
   .qty .rec .amt.big .ci { width: 26px; height: 26px; }
   .qty .rec .hu { font-size: 13px; color: var(--muted); }
+  .xchg .box.short { border-style: dashed; }
+  .xchg .box.short .amt { color: var(--muted); }
+  .xchg .need { font-size: 11px; color: var(--warn); font-weight: 400; }
   .tag.neg { color: var(--bad); border-color: rgba(229,103,90,.5); }
   .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
   .card.best { border-color: var(--accent); }
@@ -431,10 +434,16 @@ function exchangePlan(c, g, per) {
     .filter(o => o[0][1] > 0);
 }
 function exchangeRow(c, g, per) {
+  if (!g || !per.chaos || !per.exalted) return '';
   const plan = exchangePlan(c, g, per);
-  if (!plan.length) return '';
   const opt = o => `<span class="box">${o.map(([k, n]) => amt(k, n)).join('<span class="plus">+</span>')}</span>`;
-  return `<div class="xchg"><span class="xl">💱</span>${amt(c, g)}<span class="arr">→</span>${plan.map(opt).join('<span class="or">또는</span>')}</div>`;
+  // 디바인이 아닌데 디바인 1개가 안 되면: 디바인으로는 얼마어치인지와 1개까지 몇 개 더 필요한지 표시
+  if (c !== 'divine' && !plan.some(o => o[0][0] === 'divine')) {
+    const need = Math.ceil(per[c] - 1e-9);
+    plan.unshift({ html: `<span class="box short">${amt('divine', g / per[c])}<span class="need">1개까지 ${fmt(need - g)} ${CUR[c].short} 부족</span></span>` });
+  }
+  if (!plan.length) return '';
+  return `<div class="xchg"><span class="xl">💱</span>${amt(c, g)}<span class="arr">→</span>${plan.map(o => o.html || opt(o)).join('<span class="or">또는</span>')}</div>`;
 }
 
 function calc(d = S.detail, n = S.qty) {
@@ -502,7 +511,7 @@ function renderDetail() {
   $('sheet').innerHTML = head + qtyRow + `<div class="cards">${cards}</div>` +
     (dv && dv.history.length > 1 ? `<div class="hist"><div class="lbl">최근 ${dv.history.length}일 ${CUR[dv.id] ? CUR[dv.id].short : dv.id} 시세</div>${spark(dv.history)}</div>` : '') +
     `<div class="note">• 받는 양은 거래소가 정수 단위라 버림으로 계산했습니다. 1개씩 팔면 손해가 크면 "추천 묶음"(아이템 : 화폐) 비율로 올려 보세요.<br>
-      • 💱 은 받은 화폐를 교환소 평균 시세로 다른 화폐 하나로 바꿨을 때 받는 개수입니다 (정수 단위라 버림).<br>
+      • 💱 은 받은 화폐를 교환소 평균 시세로 다른 화폐 하나로 바꿨을 때 받는 개수입니다 (정수 단위라 버림). 디바인 1개가 안 되면 점선 칸에 디바인으로 얼마어치인지와 1개까지 부족한 개수를 보여줍니다.<br>
       • 하루 거래량이 ${THIN_VOL} 디바인어치 미만인 화폐는 잘 안 팔릴 수 있어 추천에서 뺐습니다.<br>
       • 시세는 poe.ninja 집계값이라 실제 호가와 다를 수 있습니다. 올리기 전에 거래소 호가를 확인하세요.</div>`;
 }
