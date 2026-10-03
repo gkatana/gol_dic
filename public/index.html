@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POE2 시세 · 판매 계산기</title>
+<meta name="description" content="Path of Exile 2 아이템 시세와 카오스·디바인·엑잘 중 어떤 화폐로 팔아야 이득인지 계산해 주는 비공식 도구">
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --text: #e6e8ec; --muted: #8b93a3; --accent: #d9a441; --good: #4cc38a; --bad: #e5675a; --warn: #e0b04a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px; }
+  header h1 { font-size: 20px; margin: 0; color: var(--accent); letter-spacing: -0.3px; }
+  header .sp { flex: 1; }
+  select, input[type=search], input[type=number] {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; outline: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  .rates { color: var(--muted); font-size: 13px; }
+  .rates b { color: var(--text); font-weight: 600; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .toolbar input[type=search] { flex: 1; min-width: 200px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #1a1406; font-weight: 600; }
+  .list { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 40px 1fr 120px 90px 90px; gap: 10px; align-items: center;
+    padding: 8px 12px; border-top: 1px solid var(--line); cursor: pointer; }
+  .row:first-child { border-top: 0; }
+  .row:hover { background: var(--panel2); }
+  .row.head { cursor: default; color: var(--muted); font-size: 12px; background: var(--panel2); }
+  .row img { width: 36px; height: 36px; object-fit: contain; }
+  .nm { min-width: 0; }
+  .nm .ko { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nm .en { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .num small { display: block; color: var(--muted); font-size: 11px; }
+  .up { color: var(--good); } .down { color: var(--bad); }
+  .empty { padding: 30px; text-align: center; color: var(--muted); }
+  footer { margin-top: 24px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+  footer a { color: var(--muted); }
+
+  /* 상세 */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto; z-index: 10; }
+  .modal.open { display: flex; }
+  .sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 640px; padding: 18px; }
+  .sheet-h { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .sheet-h img { width: 52px; height: 52px; object-fit: contain; }
+  .sheet-h .ko { font-size: 18px; font-weight: 700; }
+  .sheet-h .x { margin-left: auto; background: none; border: 0; font-size: 22px; color: var(--muted); cursor: pointer; }
+  .qty { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .qty input { width: 100px; }
+  .qty button { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .verdict { background: rgba(217,164,65,.12); border: 1px solid rgba(217,164,65,.4); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .verdict b { color: var(--accent); }
+  .cards { display: grid; gap: 8px; }
+  .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .card.best { border-color: var(--accent); }
+  .card .top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .card .cur { font-weight: 700; }
+  .card .got { font-size: 18px; font-weight: 700; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .card .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.best { color: #1a1406; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .tag.warn { color: var(--warn); border-color: var(--warn); }
+  .hist { margin-top: 14px; }
+  .hist .lbl { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .hist svg { width: 100%; height: 70px; display: block; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 12px; line-height: 1.6; }
+
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 34px 1fr 96px; }
+    .row .c-vol, .row .c-ch { display: none; }
+    .row img { width: 30px; height: 30px; }
+    .modal { padding: 0; }
+    .sheet { border-radius: 0; min-height: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>POE2 시세 · 판매 계산기</h1>
+    <select id="league" aria-label="리그"></select>
+    <span class="sp"></span>
+    <span class="rates" id="rates"></span>
+  </header>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="아이템 검색 (한글 / 영어)">
+    <select id="sort" aria-label="정렬">
+      <option value="price">가격 높은순</option>
+      <option value="vol">거래량순</option>
+      <option value="ch">7일 상승순</option>
+      <option value="name">이름순</option>
+    </select>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="list" id="list"><div class="empty">불러오는 중…</div></div>
+
+  <footer>
+    비공식 팬 사이트입니다. Grinding Gear Games 및 카카오게임즈와 관련이 없습니다.<br>
+    시세 출처: <a href="https://poe.ninja/poe2/economy" target="_blank" rel="noopener">poe.ninja</a> ·
+    한글 이름: 카카오게임즈 POE2 공식 거래소 데이터 · <span id="updated"></span>
+  </footer>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+const IMG = 'https://web.poecdn.com';
+const LEAGUE_KO = {
+  'Forbidden Rites': '금단의 의식', 'HC Forbidden Rites': 'HC 금단의 의식',
+  'Runes of Aldur': '알두르의 룬', 'HC Runes of Aldur': 'HC 알두르의 룬',
+  'Standard': '스탠다드', 'Hardcore': '하드코어',
+};
+const CUR = {
+  divine:  { ko: '디바인 오브', short: '디바인' },
+  chaos:   { ko: '카오스 오브', short: '카오스' },
+  exalted: { ko: '엑잘티드 오브', short: '엑잘' },
+};
+const THIN_VOL = 5;   // 하루 거래량(디바인 환산)이 이보다 적으면 "거래 적음"으로 보고 추천에서 제외
+
+const S = { league: null, data: null, cat: 'all', q: '', sort: 'price', item: null, detail: null, qty: 1 };
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+function fmt(n) {
+  if (n == null || !isFinite(n)) return '-';
+  const a = Math.abs(n);
+  const d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.1 ? 3 : 4;
+  return n.toLocaleString('ko-KR', { maximumFractionDigits: d });
+}
+// 1개당 디바인 가치를 보기 좋은 단위로 (1 디바인 이상 → 디바인, 그 아래 → 카오스, 1 카오스 미만 → 엑잘)
+function priceLabel(div) {
+  const r = S.data.rates || {};
+  if (div >= 1 || !r.chaos) return { main: fmt(div) + ' 디바인', sub: r.chaos ? fmt(div * r.chaos) + ' 카오스' : '' };
+  const c = div * r.chaos;
+  if (c >= 1 || !r.exalted) return { main: fmt(c) + ' 카오스', sub: fmt(div) + ' 디바인' };
+  return { main: fmt(div * r.exalted) + ' 엑잘', sub: fmt(c) + ' 카오스' };
+}
+
+async function api(path) {
+  const r = await fetch(path);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+
+async function loadLeague(league) {
+  $('list').innerHTML = '<div class="empty">불러오는 중…</div>';
+  try {
+    S.data = await api('/api/snapshot' + (league ? '?league=' + encodeURIComponent(league) : ''));
+  } catch (e) {
+    $('list').innerHTML = '<div class="empty">시세를 불러오지 못했습니다. (' + esc(e.message) + ')</div>';
+    return;
+  }
+  S.league = S.data.league;
+  store('league', S.league);
+  $('league').innerHTML = S.data.leagues.map(l =>
+    `<option value="${esc(l)}"${l === S.league ? ' selected' : ''}>${esc(LEAGUE_KO[l] || l)}</option>`).join('');
+  const r = S.data.rates || {};
+  $('rates').innerHTML = r.exalted
+    ? `1 디바인 = <b>${fmt(r.chaos)}</b> 카오스 = <b>${fmt(r.exalted)}</b> 엑잘` : '';
+  $('updated').textContent = '갱신: ' + new Date(S.data.updatedAt).toLocaleString('ko-KR');
+  renderChips();
+  renderList();
+}
+
+function renderChips() {
+  const types = [...new Set(S.data.items.map(i => i.type))];
+  if (S.cat !== 'all' && !types.includes(S.cat)) S.cat = 'all';
+  const chips = [['all', '전체']].concat(types.map(t => [t, S.data.typeKo[t] || t]));
+  $('chips').innerHTML = chips.map(([k, l]) =>
+    `<button class="chip${S.cat === k ? ' on' : ''}" data-cat="${esc(k)}">${esc(l)}</button>`).join('');
+}
+
+function filtered() {
+  const q = S.q.trim().toLowerCase();
+  let a = S.data.items.filter(i =>
+    (S.cat === 'all' || i.type === S.cat) &&
+    (!q || (i.ko || '').toLowerCase().includes(q) || i.en.toLowerCase().includes(q)));
+  const by = {
+    price: (x, y) => y.div - x.div,
+    vol: (x, y) => (y.vol || 0) - (x.vol || 0),
+    ch: (x, y) => (y.ch7 || 0) - (x.ch7 || 0),
+    name: (x, y) => (x.ko || x.en).localeCompare(y.ko || y.en, 'ko'),
+  }[S.sort];
+  return a.sort(by);
+}
+
+function renderList() {
+  const a = filtered();
+  if (!a.length) { $('list').innerHTML = '<div class="empty">검색 결과가 없습니다.</div>'; return; }
+  const head = `<div class="row head"><span></span><span>아이템</span><span class="num">1개 시세</span>
+    <span class="num c-ch">7일</span><span class="num c-vol">거래량/일</span></div>`;
+  $('list').innerHTML = head + a.map(i => {
+    const p = priceLabel(i.div);
+    const ch = i.ch7 == null ? '-' : (i.ch7 > 0 ? '+' : '') + fmt(i.ch7) + '%';
+    const cls = i.ch7 > 0 ? 'up' : i.ch7 < 0 ? 'down' : '';
+    return `<div class="row" data-id="${esc(i.id)}">
+      ${i.img ? `<img src="${IMG + esc(i.img)}" alt="" loading="lazy">` : '<span></span>'}
+      <div class="nm"><div class="ko">${esc(i.ko || i.en)}</div>${i.ko ? `<div class="en">${esc(i.en)}</div>` : ''}</div>
+      <div class="num">${esc(p.main)}<small>${esc(p.sub)}</small></div>
+      <div class="num c-ch ${cls}">${ch}</div>
+      <div class="num c-vol">${fmt(i.vol)}<small>디바인</small></div>
+    </div>`;
+  }).join('');
+}
+
+// ── 판매 계산 ───────────────────────────────────────────────────────────
+// 거래소는 개수를 정수로만 걸 수 있으므로 받는 화폐는 버림 처리
+function bestBundle(rate) {
+  let best = null;
+  for (let k = 1; k <= 40; k++) {
+    const m = Math.floor(k * rate + 1e-9);
+    if (m < 1) continue;
+    const eff = m / (k * rate);
+    if (!best || eff > best.eff + 1e-9) best = { k, m, eff };
+    if (eff >= 0.99) return { k, m, eff };
+  }
+  return best;
+}
+
+function calc() {
+  const d = S.detail, r = d.rates || S.data.rates || {};
+  const per = { divine: 1, chaos: r.chaos, exalted: r.exalted };   // 1 디바인당 해당 화폐 개수
+  const n = S.qty;
+  const rows = d.pairs.filter(p => CUR[p.id] && per[p.id] && p.rate > 0).map(p => {
+    const got = Math.floor(n * p.rate + 1e-9);
+    return { ...p, got, valueDiv: got / per[p.id], thin: (p.vol || 0) < THIN_VOL, bundle: bestBundle(p.rate) };
+  });
+  const pool = rows.some(x => !x.thin) ? rows.filter(x => !x.thin) : rows;
+  const best = pool.reduce((a, b) => (b.valueDiv > (a ? a.valueDiv : -1) ? b : a), null);
+  return { rows, best, per };
+}
+
+function renderDetail() {
+  const i = S.item, d = S.detail;
+  const head = `<div class="sheet-h">
+      ${i.img ? `<img src="${IMG + esc(i.img)}" alt="">` : ''}
+      <div><div class="ko">${esc(i.ko || i.en)}</div><div class="en" style="color:var(--muted);font-size:12px">${esc(i.en)} · ${esc(S.data.typeKo[i.type] || i.type)}</div></div>
+      <button class="x" data-close aria-label="닫기">×</button>
+    </div>`;
+  if (!d) { $('sheet').innerHTML = head + '<div class="empty">화폐별 시세 불러오는 중…</div>'; return; }
+  if (d.error) { $('sheet').innerHTML = head + `<div class="empty">불러오지 못했습니다. (${esc(d.error)})</div>`; return; }
+
+  const { rows, best, per } = calc();
+  const n = S.qty;
+  const qty = `<div class="qty">판매 개수
+      <button data-q="-1">−</button><input type="number" id="qtyIn" min="1" max="9999" value="${n}"><button data-q="1">+</button>
+    </div>`;
+  if (!rows.length) { $('sheet').innerHTML = head + qty + '<div class="empty">카오스·디바인·엑잘 직거래 시세가 없습니다.</div>'; return; }
+
+  const verdict = best
+    ? `<div class="verdict">${n}개를 팔 때는 <b>${CUR[best.id].ko}</b>로 파는 게 가장 많이 받습니다.
+        <span style="color:var(--muted)">(${fmt(best.got)} ${CUR[best.id].short} ≈ ${fmt(best.valueDiv)} 디바인 가치)</span></div>`
+    : '';
+  const sorted = rows.slice().sort((a, b) => b.valueDiv - a.valueDiv);
+  const cards = sorted.map(x => {
+    const isBest = best && x.id === best.id;
+    const diff = best && !isBest && best.valueDiv > 0 ? Math.round((x.valueDiv / best.valueDiv - 1) * 100) : null;
+    const b = x.bundle;
+    const bundleTxt = b ? (b.k === 1 ? `1개씩 팔아도 손해 거의 없음` :
+      `추천 묶음 <b>${b.k}개 : ${b.m} ${CUR[x.id].short}</b> (시세의 ${Math.round(b.eff * 100)}%)`) : '';
+    const others = Object.keys(CUR).filter(c => c !== x.id && per[c])
+      .map(c => `${fmt(x.valueDiv * per[c])} ${CUR[c].short}`).join(' · ');
+    return `<div class="card${isBest ? ' best' : ''}">
+        <div class="top">
+          <span class="cur">${CUR[x.id].ko}</span>
+          ${isBest ? '<span class="tag best">추천</span>' : ''}
+          ${x.thin ? '<span class="tag warn">거래 적음</span>' : ''}
+          ${diff != null ? `<span class="tag">${diff > 0 ? '+' : ''}${diff}%</span>` : ''}
+          <span class="got">${fmt(x.got)} ${CUR[x.id].short}</span>
+        </div>
+        <div class="sub">시장가 1개당 ${fmt(x.rate)} ${CUR[x.id].short} · ${n}개 = ${fmt(n * x.rate)} → 버림 ${fmt(x.got)} · 환산 ${others}</div>
+        <div class="sub">${bundleTxt} · 거래량 하루 ${fmt(x.vol)} 디바인어치</div>
+      </div>`;
+  }).join('');
+
+  const dv = d.pairs.find(p => p.id === 'divine') || d.pairs[0];
+  $('sheet').innerHTML = head + qty + verdict + `<div class="cards">${cards}</div>` +
+    (dv && dv.history.length > 1 ? `<div class="hist"><div class="lbl">최근 ${dv.history.length}일 ${CUR[dv.id] ? CUR[dv.id].short : dv.id} 시세</div>${spark(dv.history)}</div>` : '') +
+    `<div class="note">• 거래소는 개수를 정수로만 걸 수 있어 받는 화폐는 버림으로 계산했습니다. 1개씩 팔면 손해가 크면 "추천 묶음" 비율로 올려 보세요.<br>
+      • 하루 거래량이 ${THIN_VOL} 디바인어치 미만인 화폐는 잘 안 팔릴 수 있어 추천에서 뺐습니다.<br>
+      • 시세는 poe.ninja 집계값이라 실제 호가와 다를 수 있습니다. 올리기 전에 거래소 호가를 확인하세요.</div>`;
+}
+
+function spark(h) {
+  const w = 600, ht = 70, pad = 6;
+  const v = h.map(x => x.rate), mn = Math.min(...v), mx = Math.max(...v), rg = mx - mn || 1;
+  const pts = v.map((y, i) => `${(pad + i * (w - 2 * pad) / (v.length - 1)).toFixed(1)},${(ht - pad - (y - mn) / rg * (ht - 2 * pad)).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="#d9a441" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  </svg><div class="lbl" style="display:flex;justify-content:space-between"><span>최저 ${fmt(mn)}</span><span>최고 ${fmt(mx)}</span></div>`;
+}
+
+async function openItem(id) {
+  const i = S.data.items.find(x => x.id === id);
+  if (!i) return;
+  S.item = i; S.detail = null;
+  $('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderDetail();
+  try {
+    S.detail = await api(`/api/item?league=${encodeURIComponent(S.league)}&type=${encodeURIComponent(i.type)}&id=${encodeURIComponent(i.did || i.id)}`);
+  } catch (e) { S.detail = { error: e.message }; }
+  if (S.item === i) renderDetail();
+}
+function closeItem() { $('modal').classList.remove('open'); document.body.style.overflow = ''; S.item = null; }
+
+// ── 이벤트 ─────────────────────────────────────────────────────────────
+$('league').addEventListener('change', e => loadLeague(e.target.value));
+$('q').addEventListener('input', e => { S.q = e.target.value; renderList(); });
+$('sort').addEventListener('change', e => { S.sort = e.target.value; renderList(); });
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-cat]'); if (!b) return;
+  S.cat = b.dataset.cat; renderChips(); renderList();
+});
+$('list').addEventListener('click', e => { const r = e.target.closest('.row[data-id]'); if (r) openItem(r.dataset.id); });
+$('modal').addEventListener('click', e => {
+  if (e.target === $('modal') || e.target.closest('[data-close]')) return closeItem();
+  const q = e.target.closest('[data-q]');
+  if (q) { S.qty = Math.min(9999, Math.max(1, S.qty + Number(q.dataset.q))); renderDetail(); }
+});
+$('modal').addEventListener('change', e => {
+  if (e.target.id !== 'qtyIn') return;
+  S.qty = Math.min(9999, Math.max(1, Math.floor(Number(e.target.value) || 1)));
+  renderDetail();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.item) closeItem(); });
+
+loadLeague(load('league'));
+</script>
+</body>
+</html>

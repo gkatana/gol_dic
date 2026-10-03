@@ -1,0 +1,22 @@
+name = "gol-dic"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# public/ 정적 파일은 그대로 서빙, /api/* 만 Worker 코드가 처리
+[assets]
+directory = "./public"
+run_worker_first = ["/api/*"]
+
+# 시세 스냅샷 저장소 — 배포 전 `npx wrangler kv namespace create DATA` 로 만든 id로 교체
+[[kv_namespaces]]
+binding = "DATA"
+id = "7e31536a31dc4388a2215f579a0a7e7d"
+
+# 10분마다 시세 수집
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+# 수집할 리그 (쉼표 구분, 첫 번째가 기본 리그). 리그 1개당 poe.ninja 요청 13회 —
+# 무료 플랜은 실행 1회당 외부 요청 50회 제한이라 3개까지 가능
+LEAGUES = "Forbidden Rites,HC Forbidden Rites"

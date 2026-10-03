@@ -1,0 +1,11 @@
+{
+  "name": "gol-dic",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
